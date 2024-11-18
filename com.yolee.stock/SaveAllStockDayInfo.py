@@ -2,6 +2,7 @@ import tushare as ts
 import pandas as pd
 import time
 import os
+import gc  # 导入垃圾回收模块
 
 # 记录开始时间，用于计算耗时
 start_time = time.time()
@@ -33,15 +34,14 @@ for index, ts_code in enumerate(stock_code_cache):
         if not stock_data.empty:
             # 定义每只股票数据保存的具体文件路径，文件名使用股票代码
             file_path = os.path.join(root_save_path, f"{ts_code}.csv")
-            # 使用to_csv方法保存数据，设置chunksize分块处理，每块处理完可视为一个进度阶段
-            chunksize = 1000  # 可根据数据量大小调整分块大小
+            chunksize = 1000
             total_chunks = len(stock_data) // chunksize + (1 if len(stock_data) % chunksize > 0 else 0)
             print(f"开始保存股票 {ts_code} 的历史日K线数据，共 {len(stock_data)} 行，分 {total_chunks} 块处理...")
             for i in range(0, len(stock_data), chunksize):
                 chunk = stock_data.iloc[i:i + chunksize]
-                if i == 0:  # 若是第一块数据，写入表头
+                if i == 0:
                     chunk.to_csv(file_path, mode='w', encoding='utf-8', index=False)
-                else:  # 后续块数据，追加写入文件
+                else:
                     chunk.to_csv(file_path, mode='a', encoding='utf-8', index=False, header=False)
                 progress = (i + chunksize) / len(stock_data) * 100
                 print(f"已保存 {i + chunksize} 行，保存进度: {progress:.2f}%")
@@ -58,6 +58,8 @@ for index, ts_code in enumerate(stock_code_cache):
     if (index + 1) % 10 == 0:
         overall_progress = (index + 1) / len(stock_code_cache) * 100
         print(f"已下载 {index + 1} 只股票的历史日K线数据，整体下载进度: {overall_progress:.2f}%")
+    if (index + 1) % 50 == 0:  # 每处理完50只股票触发一次垃圾回收，可根据实际情况调整频率
+        gc.collect()
 
 # 记录结束时间，计算耗时并输出
 end_time = time.time()
