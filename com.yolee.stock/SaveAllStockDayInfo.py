@@ -33,26 +33,26 @@ for index, ts_code in enumerate(stock_code_cache):
         if not stock_data.empty:
             # 定义每只股票数据保存的具体文件路径，文件名使用股票代码
             file_path = os.path.join(root_save_path, f"{ts_code}.csv")
-            # 获取单只股票数据的总行数，用于显示进度
-            total_rows = len(stock_data)
-            print(f"开始保存股票 {ts_code} 的历史日K线数据，共 {total_rows} 行...")
-            # 逐行写入文件来模拟保存进度显示（实际可采用更高效方式）
-            with open(file_path, 'w', encoding='utf-8', newline='') as f:
-                f.write(','.join(stock_data.columns) + '\n')
-                for row_index, row in enumerate(stock_data.values):
-                    f.write(','.join(map(str, row)) + '\n')
-                    if (row_index + 1) % 100 == 0:
-                        progress = (row_index + 1) / total_rows * 100
-                        print(f"已保存 {row_index + 1} 行，保存进度: {progress:.2f}%")
+            # 使用to_csv方法保存数据，设置chunksize分块处理，每块处理完可视为一个进度阶段
+            chunksize = 1000  # 可根据数据量大小调整分块大小
+            total_chunks = len(stock_data) // chunksize + (1 if len(stock_data) % chunksize > 0 else 0)
+            print(f"开始保存股票 {ts_code} 的历史日K线数据，共 {len(stock_data)} 行，分 {total_chunks} 块处理...")
+            for i in range(0, len(stock_data), chunksize):
+                chunk = stock_data.iloc[i:i + chunksize]
+                if i == 0:  # 若是第一块数据，写入表头
+                    chunk.to_csv(file_path, mode='w', encoding='utf-8', index=False)
+                else:  # 后续块数据，追加写入文件
+                    chunk.to_csv(file_path, mode='a', encoding='utf-8', index=False, header=False)
+                progress = (i + chunksize) / len(stock_data) * 100
+                print(f"已保存 {i + chunksize} 行，保存进度: {progress:.2f}%")
             print(f"股票 {ts_code} 的历史日K线数据已成功保存至 {file_path}")
         else:
             print(f"股票 {ts_code} 无对应历史日K线数据，跳过保存")
-    except ts.RequestError as e:  # 针对Tushare请求相关异常处理
+    except ts.RequestError as e:
         print(f"请求获取股票 {ts_code} 的历史日K线数据时出错，错误信息: {e}，将尝试重新获取...")
-        # 可以在这里添加重新获取数据的逻辑，比如等待几秒后再次调用接口获取
-    except OSError as e:  # 文件操作相关异常处理
+    except OSError as e:
         print(f"保存股票 {ts_code} 的历史日K线数据时文件操作出错，错误信息: {e}")
-    except Exception as e:  # 其他未知异常兜底处理
+    except Exception as e:
         print(f"获取或保存股票 {ts_code} 的历史日K线数据时出现未知错误，错误信息: {e}")
     # 每下载完10只股票显示一次整体下载进度（可根据实际情况调整频率）
     if (index + 1) % 10 == 0:
