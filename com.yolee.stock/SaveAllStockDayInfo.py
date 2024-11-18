@@ -47,8 +47,13 @@ for index, ts_code in enumerate(stock_code_cache):
             print(f"股票 {ts_code} 的历史日K线数据已成功保存至 {file_path}")
         else:
             print(f"股票 {ts_code} 无对应历史日K线数据，跳过保存")
-    except Exception as e:
-        print(f"获取或保存股票 {ts_code} 的历史日K线数据时出错，错误信息: {e}")
+    except ts.RequestError as e:  # 针对Tushare请求相关异常处理
+        print(f"请求获取股票 {ts_code} 的历史日K线数据时出错，错误信息: {e}，将尝试重新获取...")
+        # 可以在这里添加重新获取数据的逻辑，比如等待几秒后再次调用接口获取
+    except OSError as e:  # 文件操作相关异常处理
+        print(f"保存股票 {ts_code} 的历史日K线数据时文件操作出错，错误信息: {e}")
+    except Exception as e:  # 其他未知异常兜底处理
+        print(f"获取或保存股票 {ts_code} 的历史日K线数据时出现未知错误，错误信息: {e}")
     # 每下载完10只股票显示一次整体下载进度（可根据实际情况调整频率）
     if (index + 1) % 10 == 0:
         overall_progress = (index + 1) / len(stock_code_cache) * 100
