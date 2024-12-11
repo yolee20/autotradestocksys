@@ -8,14 +8,6 @@ set LOG_FILE=
 set BACKUP_DIR=
 
 
-REM 检查锁文件是否存在
-if exist "%LOCK_FILE%" (
-    echo 对不起，clear-trash.bat 程序正在运行，请等待其完成或手动终止后再尝试运行。
-    pause
-    exit /b
-)
-
-
 REM 检查系统临时目录是否存在
 if not defined TEMP (
     echo Error: TEMP environment variable is not defined.
@@ -34,6 +26,13 @@ REM 检查并设置锁文件的位置，使用系统临时目录
 set LOCK_FILE=%TEMP%\clear-trash.lock
 
 
+REM 检查锁文件是否存在
+if exist "%LOCK_FILE%" (
+    echo 对不起，clear-trash.bat 程序正在运行，请等待其完成或手动终止后再尝试运行。
+    pause
+    exit /b
+)
+
 
 REM 检查并设置日志文件的位置，使用系统临时目录
 if defined TEMP (
@@ -47,9 +46,21 @@ if defined USERPROFILE (
 )
 
 
-REM 创建锁文件
-echo 2 > "%LOCK_FILE%"
-pause
+REM 获取当前系统时间
+for /F "tokens=1-4 delims=:.," %%a in ("%time%") do (
+    set CURRENT_TIME=%%a:%%b:%%c.%%d
+)
+
+
+REM 获取当前登录用户
+for /F "usebackq tokens=*" %%a in (`whoami`) do (
+    set CURRENT_USER=%%a
+)
+
+
+REM 创建锁文件，将 del 命令、当前系统时间和登录用户写入其中
+echo del & echo Time: %CURRENT_TIME% & echo User: %CURRENT_USER% > "%LOCK_FILE%"
+
 
 REM 记录程序开始时间
 set START_TIME=%time%
@@ -90,14 +101,6 @@ set FILES[11]=%userprofile%\recent\*.*
 set BACKUP[11]=%BACKUP_DIR%\recent\*.*
 set FILES[12]=%userprofile%\Local Settings\Temporary Internet Files\*.*
 set BACKUP[12]=%BACKUP_DIR%\InternetTemp\*.*
-
-
-REM 输出文件和目录信息，用于调试
-echo 以下是要处理的文件和目录： >> "%LOG_FILE%"
-for /l %%i in (0,1,12) do (
-    echo FILES[%%i]:!FILES[%%i]! >> "%LOG_FILE%"
-    echo BACKUP[%%i]:!BACKUP[%%i]! >> "%LOG_FILE%"
-)
 
 
 echo 4
