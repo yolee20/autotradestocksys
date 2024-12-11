@@ -34,7 +34,7 @@ set LOCK_FILE=%TEMP%\clear-trash_%CURRENT_TIME%.lock
 
 REM 检查锁文件是否存在
 if exist "%LOCK_FILE%" (
-    echo 对不起，clear-trash.bat 程序正在运行，请等待其完成或手动终止后再尝试运行。
+    echo 对不起，clear-trash.bat 程序正在运行，请等待其完成或手动终止后再尝试运行.
     pause
     exit /b
 )
@@ -51,7 +51,7 @@ if defined USERPROFILE (
 
 
 REM 获取当前登录用户
-for /F "usebackq tokens=*" %%a in (`whoami`) do (
+for /F "usebackq tokens=*" in (`whoami`) do (
     set CURRENT_USER=%%a
 )
 
@@ -113,6 +113,8 @@ pause
 REM 循环处理要删除的文件和目录
 echo Starting the loop to move files... >> "%LOG_FILE%"
 for /l %%i in (0,1,12) do (
+    REM 输出调试信息，方便查看循环进度
+    echo 41
     REM 获取源文件或目录
     set SRC=!FILES[%%i]!
     REM 获取目标备份位置
@@ -125,7 +127,8 @@ for /l %%i in (0,1,12) do (
         REM 尝试多次移动操作，最多 3 次
         set retry_count=0
         :retry_move
-        move /y "!SRC!" "!DST!" >> "%LOG_FILE%"
+        REM 确保对文件和目录的路径使用双引号
+        move /y "!SRC!" "!DST!" >> "%LOG_FILE%" 2>&1
         if errorlevel 1 (
             set /a retry_count+=1
             if!retry_count! leq 3 (
@@ -133,13 +136,14 @@ for /l %%i in (0,1,12) do (
                 goto retry_move
             ) else (
                 echo Failed to move "!SRC!" to "!DST!" after 3 attempts >> "%LOG_FILE%"
+                echo Error code: %errorlevel% >> "%LOG_FILE%"
             )
         ) else (
             echo Successfully moved "!SRC!" to "!DST!" >> "%LOG_FILE%"
         )
-    ) else {
+    ) else (
         echo Source file or directory "!SRC!" does not exist. >> "%LOG_FILE%"
-    }
+    )
 )
 
 
@@ -154,11 +158,11 @@ if errorlevel 1 (
     echo Failed to delete and recreate temp directory >> "%LOG_FILE%"
 ) else (
     echo Successfully deleted and recreated temp directory >> "%LOG_FILE%"
-}
+)
 
 
 echo 清除系统垃圾完成！ >> "%LOG_FILE%"
-
+pause
 
 REM 删除锁文件
 del "%LOCK_FILE%"
@@ -215,7 +219,7 @@ set /a "duration_hours=%duration_total% / 60"
 
 
 echo 程序执行时长：%duration_hours%:%duration_minutes%:%duration_seconds%.%duration_hundredths% >> "%LOG_FILE%"
-
+pause
 
 endlocal
 goto :eof
