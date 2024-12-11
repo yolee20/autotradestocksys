@@ -41,16 +41,11 @@ if defined TEMP (
 
 
 REM 检查并设置备份目录，将删除的文件保存至此
-if defined USERPROFILE (
-    set BACKUP_DIR=%USERPROFILE%\Desktop\DeletedFilesBackup
-)
+if defined USERPROURL=%USERPROFILE%\Desktop\DeletedFilesBackup
 
 
 REM 记录程序开始时间
 set START_TIME=%time%
-
-
-
 
 
 REM 创建锁文件
@@ -109,10 +104,18 @@ for /l %%i in (0,1,12) do (
     echo Processing file: "!SRC!" >> "%LOG_FILE%"
     REM 给源文件和目标文件加双引号
     if exist "!SRC!" (
+        REM 尝试多次移动操作，最多 3 次
+        set retry_count=0
+        :retry_move
         move /y "!SRC!" "!DST!" >> "%LOG_FILE%"
         if errorlevel 1 (
-            echo Failed to move "!SRC!" to "!DST!" >> "%LOG_FILE%"
-            echo Error code: %errorlevel% >> "%LOG_FILE%"
+            set /a retry_count+=1
+            if!retry_count! leq 3 (
+                echo Failed to move "!SRC!" to "!DST!", retrying... >> "%LOG_FILE%"
+                goto retry_move
+            ) else (
+                echo Failed to move "!SRC!" to "!DST!" after 3 attempts >> "%LOG_FILE%"
+            )
         ) else (
             echo Successfully moved "!SRC!" to "!DST!" >> "%LOG_FILE%"
         )
