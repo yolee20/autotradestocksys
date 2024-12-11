@@ -47,9 +47,10 @@ if defined USERPROFILE (
 
 
 REM 获取当前系统时间
-for /F "tokens=1-4 delims=:.," %%a in ("%time%") do (
-    set CURRENT_TIME=%%a:%%b:%%c.%%d
+for /F "tokens=2 delims==." %%a in ('wmic os get localdatetime /value') do (
+    set CURRENT_TIME=%%a
 )
+set CURRENT_TIME=%CURRENT_TIME:~8,2%:%CURRENT_TIME:~10,2%:%CURRENT_TIME:~12,2%
 
 
 REM 获取当前登录用户
@@ -59,7 +60,19 @@ for /F "usebackq tokens=*" %%a in (`whoami`) do (
 
 
 REM 创建锁文件，将 del 命令、当前系统时间和登录用户写入其中
-echo del & echo Time:!CURRENT_TIME! & echo User:!CURRENT_USER! > "%LOCK_FILE%"
+(
+    echo del
+    echo Time:!CURRENT_TIME!
+    echo User:!CURRENT_USER!
+) > "%LOCK_FILE%"
+
+
+REM 检查锁文件是否成功写入
+if errorlevel 1 (
+    echo 无法将信息写入锁文件 "%LOCK_FILE%", 请检查权限或文件系统。>> "%LOG_FILE%"
+    pause
+    exit /b
+)
 
 
 REM 记录程序开始时间
