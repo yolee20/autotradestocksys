@@ -2,38 +2,60 @@
 setlocal enabledelayedexpansion
 
 
-REM 定义锁文件的位置，使用系统临时目录
-set LOCK_FILE=%TEMP%\clear-trash.lock
-
-
-REM 定义日志文件的位置
-set LOG_FILE=%TEMP%\clear-trash.log
-
-
-REM 定义备份目录，将删除的文件保存至此
-set BACKUP_DIR=%USERPROFILE%\Desktop\DeletedFilesBackup
-
-
-REM 检查备份目录是否存在，若不存在则创建
-if not exist "%BACKUP_DIR%" (
-    mkdir "%BACKUP_DIR%"
-)
-
-
-echo "1"
-pause
-
+REM 先进行条件判断，再定义锁文件、日志文件和备份目录的位置
+set LOCK_FILE=
+set LOG_FILE=
+set BACKUP_DIR=
 
 REM 检查锁文件是否存在
 if exist "%LOCK_FILE%" (
-    echo Another instance of clear-trash.bat is already running.
+    echo 对不起，重复执行，因为已经有 clear-trash 程序在执行了。主人可以按任意键退出对话框
+    pause
+    exit /b
+)
+
+REM 检查并设置锁文件的位置，使用系统临时目录
+if defined TEMP (
+    set LOCK_FILE=%TEMP%\clear-trash.lock
+)
+
+
+REM 检查系统临时目录是否存在
+if not defined TEMP (
+    echo Error: TEMP environment variable is not defined.
     exit /b
 )
 
 
-REM 创建锁文件
-echo 1 > "%LOCK_FILE%"
+REM 检查用户配置文件目录是否存在
+if not defined USERPROFILE (
+    echo Error: USERPROFILE environment variable is not defined.
+    exit /b
+)
 
+
+REM 检查并设置日志文件的位置，使用系统临时目录
+if defined TEMP (
+    set LOG_FILE=%TEMP%\clear-trash.log
+)
+
+
+REM 检查并设置备份目录，将删除的文件保存至此
+if defined USERPROFILE (
+    set BACKUP_DIR=%USERPROFILE%\Desktop\DeletedFilesBackup
+)
+
+
+REM 记录程序开始时间
+set START_TIME=%time%
+
+
+
+
+
+REM 创建锁文件
+echo 2 > "%LOCK_FILE%"
+pause
 
 REM 以下是清除系统垃圾文件的代码部分
 echo 请勿关闭本窗口！
@@ -42,7 +64,6 @@ echo 正在清除系统垃圾文件，请稍等...... >> "%LOG_FILE%"
 
 echo "3"
 pause
-
 
 REM 定义要删除的文件和目录及其备份位置
 set FILES[0]=%systemdrive%\*.tmp
@@ -73,7 +94,11 @@ set FILES[12]=%userprofile%\Local Settings\Temporary Internet Files\*.*
 set BACKUP[12]=%BACKUP_DIR%\InternetTemp\*.*
 
 
+echo "4"
+pause
+
 REM 循环处理要删除的文件和目录
+echo Starting the loop to move files... >> "%LOG_FILE%"
 for /l %%i in (0,1,12) do (
     REM 获取源文件或目录
     set SRC=!FILES[%%i]!
@@ -81,20 +106,33 @@ for /l %%i in (0,1,12) do (
     set DST=!BACKUP[%%i]!
     REM 确保目标备份子目录存在
     call :ensure_dir "!DST!"
+    echo Processing file: "!SRC!" >> "%LOG_FILE%"
+    REM 给源文件和目标文件加双引号
     if exist "!SRC!" (
         move /y "!SRC!" "!DST!" >> "%LOG_FILE%"
         if errorlevel 1 (
-            echo Failed to move!SRC! >> "%LOG_FILE%"
+            echo Failed to move "!SRC!" to "!DST!" >> "%LOG_FILE%"
+            echo Error code: %errorlevel% >> "%LOG_FILE%"
+        ) else (
+            echo Successfully moved "!SRC!" to "!DST!" >> "%LOG_FILE%"
         )
+    ) else (
+        echo Source file or directory "!SRC!" does not exist. >> "%LOG_FILE%"
     )
 )
 
 
+echo "5"
+pause
+
 REM 删除 Windows 临时目录并重新创建
+echo Deleting and recreating Windows temp directory... >> "%LOG_FILE%"
 rd /s /q %windir%\temp & md %windir%\temp
 if errorlevel 1 (
     echo Failed to delete and recreate temp directory >> "%LOG_FILE%"
-)
+) else (
+    echo Successfully deleted and recreated temp directory >> "%LOG_FILE%"
+}
 
 
 echo 清除系统垃圾完成！ >> "%LOG_FILE%"
@@ -102,6 +140,14 @@ echo 清除系统垃圾完成！ >> "%LOG_FILE%"
 
 REM 删除锁文件
 del "%LOCK_FILE%"
+
+
+REM 记录程序结束时间
+set END_TIME=%time%
+
+
+REM 计算程序执行时长
+call :calculate_duration %START_TIME% %END_TIME%
 
 
 exit
@@ -113,5 +159,41 @@ set dir_path=%~dp1
 if not exist "%dir_path%" (
     mkdir "%dir_path%"
 )
+endlocal
+goto :eof
+
+
+:calculate_duration
+setlocal
+set "start_hours=%~1:~0,2%"
+set "start_minutes=%~1:~3,2%"
+set "start_seconds=%~1:~6,2%"
+set "start_hundredths=%~1:~9,2%"
+
+
+set "end_hours=%~2:~0,2%"
+set "end_minutes=%~2:~3,2%"
+set "end_seconds=%~2:~6,2%"
+set "end_hundredths=%~2:~9,2%"
+
+
+set /a "start_total=(100*((100*((100*%start_hours%)+%start_minutes%))+%start_seconds%)+%start_hundredths%)"
+set /a "end_total=(100*((100*((100*%end_hours%)+%end_minutes%))+%end_seconds%)+%end_hundredths%)"
+
+
+set /a "duration_total=%end_total%-%start_total%"
+
+
+set /a "duration_hundredths=%duration_total% %% 100"
+set /a "duration_total=%duration_total% / 100"
+set /a "duration_seconds=%duration_total% %% 60"
+set /a "duration_total=%duration_total% / 60"
+set /a "duration_minutes=%duration_total% %% 60"
+set /a "duration_hours=%duration_total% / 60"
+
+
+echo 程序执行时长：%duration_hours%:%duration_minutes%:%duration_seconds%.%duration_hundredths% >> "%LOG_FILE%"
+pause
+
 endlocal
 goto :eof
