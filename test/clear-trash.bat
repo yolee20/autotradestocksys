@@ -7,16 +7,12 @@ set LOCK_FILE=
 set LOG_FILE=
 set BACKUP_DIR=
 
+
 REM 检查锁文件是否存在
 if exist "%LOCK_FILE%" (
-    echo 对不起，重复执行，因为已经有 clear-trash 程序在执行了。主人可以按任意键退出对话框
+    echo 对不起，clear-trash.bat 程序正在运行，请等待其完成或手动终止后再尝试运行。
     pause
     exit /b
-)
-
-REM 检查并设置锁文件的位置，使用系统临时目录
-if defined TEMP (
-    set LOCK_FILE=%TEMP%\clear-trash.lock
 )
 
 
@@ -34,6 +30,11 @@ if not defined USERPROFILE (
 )
 
 
+REM 检查并设置锁文件的位置，使用系统临时目录
+set LOCK_FILE=%TEMP%\clear-trash.lock
+
+
+
 REM 检查并设置日志文件的位置，使用系统临时目录
 if defined TEMP (
     set LOG_FILE=%TEMP%\clear-trash.log
@@ -41,23 +42,25 @@ if defined TEMP (
 
 
 REM 检查并设置备份目录，将删除的文件保存至此
-if defined USERPROURL=%USERPROFILE%\Desktop\DeletedFilesBackup
-
-
-REM 记录程序开始时间
-set START_TIME=%time%
+if defined USERPROFILE (
+    set BACKUP_DIR=%USERPROFILE%\Desktop\DeletedFilesBackup
+)
 
 
 REM 创建锁文件
 echo 2 > "%LOCK_FILE%"
 pause
 
+REM 记录程序开始时间
+set START_TIME=%time%
+
+
 REM 以下是清除系统垃圾文件的代码部分
 echo 请勿关闭本窗口！
 echo 正在清除系统垃圾文件，请稍等...... >> "%LOG_FILE%"
 
 
-echo "3"
+echo 3
 pause
 
 REM 定义要删除的文件和目录及其备份位置
@@ -89,7 +92,15 @@ set FILES[12]=%userprofile%\Local Settings\Temporary Internet Files\*.*
 set BACKUP[12]=%BACKUP_DIR%\InternetTemp\*.*
 
 
-echo "4"
+REM 输出文件和目录信息，用于调试
+echo 以下是要处理的文件和目录： >> "%LOG_FILE%"
+for /l %%i in (0,1,12) do (
+    echo FILES[%%i]:!FILES[%%i]! >> "%LOG_FILE%"
+    echo BACKUP[%%i]:!BACKUP[%%i]! >> "%LOG_FILE%"
+)
+
+
+echo 4
 pause
 
 REM 循环处理要删除的文件和目录
@@ -119,13 +130,13 @@ for /l %%i in (0,1,12) do (
         ) else (
             echo Successfully moved "!SRC!" to "!DST!" >> "%LOG_FILE%"
         )
-    ) else (
+    ) else {
         echo Source file or directory "!SRC!" does not exist. >> "%LOG_FILE%"
-    )
+    }
 )
 
 
-echo "5"
+echo 5
 pause
 
 REM 删除 Windows 临时目录并重新创建
@@ -196,7 +207,7 @@ set /a "duration_hours=%duration_total% / 60"
 
 
 echo 程序执行时长：%duration_hours%:%duration_minutes%:%duration_seconds%.%duration_hundredths% >> "%LOG_FILE%"
-pause
+
 
 endlocal
 goto :eof
