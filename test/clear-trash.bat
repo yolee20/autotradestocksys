@@ -59,7 +59,7 @@ for /F "usebackq tokens=*" %%a in (`whoami`) do (
 
 
 REM 创建锁文件，将 del 命令、当前系统时间和登录用户写入其中
-echo del & echo Time: %CURRENT_TIME% & echo User: %CURRENT_USER% > "%LOCK_FILE%"
+echo del & echo Time:!CURRENT_TIME! & echo User:!CURRENT_USER! > "%LOCK_FILE%"
 
 
 REM 记录程序开始时间
@@ -73,6 +73,7 @@ echo 正在清除系统垃圾文件，请稍等...... >> "%LOG_FILE%"
 
 echo 3
 pause
+
 
 REM 定义要删除的文件和目录及其备份位置
 set FILES[0]=%systemdrive%\*.tmp
@@ -105,6 +106,7 @@ set BACKUP[12]=%BACKUP_DIR%\InternetTemp\*.*
 
 echo 4
 pause
+
 
 REM 循环处理要删除的文件和目录
 echo Starting the loop to move files... >> "%LOG_FILE%"
@@ -141,6 +143,7 @@ for /l %%i in (0,1,12) do (
 
 echo 5
 pause
+
 
 REM 删除 Windows 临时目录并重新创建
 echo Deleting and recreating Windows temp directory... >> "%LOG_FILE%"
